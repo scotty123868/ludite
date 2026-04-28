@@ -3,19 +3,26 @@
 //
 // STORAGE — pick one or both, configure in Vercel dashboard:
 //
-//   1) Vercel KV (recommended — first-party, free tier covers a launch):
-//      Vercel dashboard → Storage → Create Database → KV → connect to project.
-//      Auto-injects KV_REST_API_URL and KV_REST_API_TOKEN.
-//      Inspect signups: in dashboard → Storage → KV → Data Browser → key:
-//      "ludite:subscribers" (a Redis list, newest first).
+//   PATH A — Resend (simplest, no database):
+//      Each signup gets emailed to NOTIFY_EMAIL. The inbox IS the list.
+//      1. Sign up at resend.com, create an API key.
+//      2. Vercel → Settings → Environment Variables, add:
+//           RESEND_API_KEY  = re_xxx
+//           NOTIFY_EMAIL    = scotty@lasolasvc.com
+//           RESEND_FROM     = Ludite <onboarding@resend.dev>
+//                             (default sender works until you verify
+//                              ludite.live as a custom Resend domain)
 //
-//   2) Resend email notification (optional — get an email per signup):
-//      Sign up at resend.com, create an API key.
-//      Vercel dashboard → Settings → Environment Variables → add:
-//        RESEND_API_KEY  = re_xxx
-//        NOTIFY_EMAIL    = scotty@lasolasvc.com
-//        RESEND_FROM     = Ludite <onboarding@resend.dev>   (default works
-//                          before you verify a custom domain)
+//   PATH B — Upstash Redis (persistent list, queryable in dashboard):
+//      Vercel → Storage → Marketplace Database Providers → Upstash → Redis →
+//      Connect to this project. Vercel auto-injects either:
+//         KV_REST_API_URL + KV_REST_API_TOKEN              (Vercel-style)
+//      or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (Upstash-native)
+//      This function handles either pair.
+//      Inspect signups: dashboard → Storage → your Upstash db → Data Browser
+//      → key: "ludite:subscribers" (Redis list, newest first).
+//
+// Both paths can be used together — emails get stored AND notified.
 //
 // If neither is configured, the function still returns 200 so the form's UX
 // doesn't break — but the signup won't be persisted. Vercel function logs
@@ -56,32 +63,37 @@ export default async function handler(req, res) {
   let stored = false;
   let notified = false;
 
-  // ---- Vercel KV via REST API (no package install needed) ----
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+  // ---- Upstash Redis via REST API (works with either env var convention) ----
+  const redisUrl =
+    process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken =
+    process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (redisUrl && redisToken) {
     try {
-      const url = `${process.env.KV_REST_API_URL}/lpush/ludite:subscribers/${encodeURIComponent(
-        JSON.stringify(record)
-      )}`;
-      const r = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`,
-        },
-      });
-      stored = r.ok;
-      if (!r.ok) {
-        console.error("KV lpush failed:", r.status, await r.text());
-      }
-      // Also keep a uniqueness set so we can dedupe later if needed.
-      await fetch(
-        `${process.env.KV_REST_API_URL}/sadd/ludite:emails/${encodeURIComponent(email)}`,
+      const r = await fetch(
+        `${redisUrl}/lpush/ludite:subscribers/${encodeURIComponent(
+          JSON.stringify(record)
+        )}`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}` },
+          headers: { Authorization: `Bearer ${redisToken}` },
+        }
+      );
+      stored = r.ok;
+      if (!r.ok) {
+        console.error("Redis lpush failed:", r.status, await r.text());
+      }
+      // Uniqueness set so we can dedupe later if needed.
+      await fetch(
+        `${redisUrl}/sadd/ludite:emails/${encodeURIComponent(email)}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${redisToken}` },
         }
       ).catch(() => {});
     } catch (e) {
-      console.error("KV store error:", e);
+      console.error("Redis store error:", e);
     }
   }
 
