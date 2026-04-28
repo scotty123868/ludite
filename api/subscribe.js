@@ -1,10 +1,16 @@
 // Vercel serverless function for the Ludite waitlist form.
 // Receives POST from /index.html → stores the email + sends a notification.
 //
-// STORAGE — pick one or both, configure in Vercel dashboard:
+// STORAGE — pick any combination, configure in Vercel dashboard:
 //
-//   PATH A — Resend (simplest, no database):
-//      Each signup gets emailed to NOTIFY_EMAIL. The inbox IS the list.
+//   PATH A — Supabase (recommended, fully integrated):
+//      Vercel → Storage → Marketplace → Supabase → Create → Connect to project.
+//      Auto-injects SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (and others).
+//      Then run supabase/schema.sql in the Supabase SQL Editor (one paste).
+//      Inspect signups: Supabase dashboard → Table Editor → "subscribers".
+//      It looks like a spreadsheet. Export as CSV any time.
+//
+//   PATH B — Resend (per-signup email notification, no database):
 //      1. Sign up at resend.com, create an API key.
 //      2. Vercel → Settings → Environment Variables, add:
 //           RESEND_API_KEY  = re_xxx
@@ -13,18 +19,15 @@
 //                             (default sender works until you verify
 //                              ludite.live as a custom Resend domain)
 //
-//   PATH B — Upstash Redis (persistent list, queryable in dashboard):
-//      Vercel → Storage → Marketplace Database Providers → Upstash → Redis →
-//      Connect to this project. Vercel auto-injects either:
-//         KV_REST_API_URL + KV_REST_API_TOKEN              (Vercel-style)
-//      or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (Upstash-native)
+//   PATH C — Upstash Redis (legacy / alternative to Supabase):
+//      Vercel → Storage → Marketplace → Upstash → Redis → Connect.
+//      Auto-injects either KV_REST_API_* or UPSTASH_REDIS_REST_* env vars.
 //      This function handles either pair.
-//      Inspect signups: dashboard → Storage → your Upstash db → Data Browser
-//      → key: "ludite:subscribers" (Redis list, newest first).
+//      Inspect signups: Upstash dashboard → Data Browser → "ludite:subscribers".
 //
-// Both paths can be used together — emails get stored AND notified.
+// You can use all three at once (database + email notification + redundancy).
 //
-// If neither is configured, the function still returns 200 so the form's UX
+// If none are configured, the function still returns 200 so the form's UX
 // doesn't break — but the signup won't be persisted. Vercel function logs
 // will surface a warning. Configure storage before launch.
 
@@ -62,6 +65,33 @@ export default async function handler(req, res) {
 
   let stored = false;
   let notified = false;
+
+  // ---- Supabase via PostgREST API (no SDK needed) ----
+  const supabaseUrl =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (supabaseUrl && supabaseKey) {
+    try {
+      const r = await fetch(`${supabaseUrl}/rest/v1/subscribers`, {
+        method: "POST",
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({ email, ip, ua, referer }),
+      });
+      // 201 = inserted. 409 = already exists (treat as success — they're on the list).
+      stored = r.ok || r.status === 409;
+      if (!r.ok && r.status !== 409) {
+        console.error("Supabase insert failed:", r.status, await r.text());
+      }
+    } catch (e) {
+      console.error("Supabase error:", e);
+    }
+  }
 
   // ---- Upstash Redis via REST API (works with either env var convention) ----
   const redisUrl =
