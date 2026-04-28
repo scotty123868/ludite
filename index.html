@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ludite &mdash; a gift network</title>
+  <meta name="description" content="Ludite is a gift network. A year-round secret santa for people who want to be present with each other." />
+
+  <meta property="og:title" content="Ludite" />
+  <meta property="og:description" content="A year-round secret santa for people who want to be present with each other." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ludite.live" />
+  <meta name="theme-color" content="#f0e7d0" />
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23f0e7d0'/><circle cx='8' cy='22' r='2.4' fill='%238b3a22'/><circle cx='16' cy='10' r='2.4' fill='%238b3a22'/><circle cx='24' cy='20' r='2.4' fill='%238b3a22'/><path d='M8,22 L16,10 L24,20' stroke='%238b3a22' stroke-width='1.4' stroke-linecap='round' fill='none' opacity='0.55'/></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,30..100;1,9..144,300..600,30..100&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --paper:     #f0e7d0;
+      --paper-2:   #e6dab8;
+      --ink:       #14110a;
+      --ink-soft:  #5a5141;
+      --ink-mute:  #8a8270;
+      --accent:    #8b3a22;
+      --accent-2:  #b9a16a;
+      --rule:      #d8cdb1;
+
+      --measure: 36rem;
+      --gutter:  clamp(1.25rem, 5vw, 2.25rem);
+
+      --serif: "Fraunces", "Tiempos Text", "Iowan Old Style", "Charter", "Hoefler Text", Georgia, serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-feature-settings: "kern", "liga", "calt", "onum";
+      font-variation-settings: "opsz" 16, "SOFT" 30;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      font-size: 17px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    @media (min-width: 720px) { body { font-size: 18px; } }
+
+    /* Subtle paper grain — fixed, low opacity, multiplies into the cream */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.08  0 0 0 0 0.07  0 0 0 0 0.04  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/></svg>");
+      mix-blend-mode: multiply;
+      opacity: 0.22;
+    }
+
+    .page {
+      position: relative;
+      z-index: 2;
+      padding: 0 var(--gutter);
+    }
+
+    a {
+      color: var(--ink);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+      text-decoration-color: var(--rule);
+      transition: color 180ms ease, text-decoration-color 180ms ease, text-decoration-thickness 180ms ease;
+    }
+    a:visited { color: var(--ink-soft); }
+    a:hover, a:focus-visible {
+      color: var(--accent);
+      text-decoration-color: var(--accent);
+      text-decoration-thickness: 1.5px;
+    }
+    a:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 4px; border-radius: 1px; }
+
+    ::selection { background: var(--ink); color: var(--paper); }
+
+    /* ------- Wordmark ------- */
+    .wordmark {
+      padding-top: clamp(1.75rem, 4.5vh, 2.5rem);
+      text-align: center;
+    }
+    .wordmark .mark {
+      display: inline-block;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 36, "wght" 500, "SOFT" 30;
+      font-size: 0.84rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--ink);
+      padding-left: 0.28em;
+    }
+    .wordmark .thread {
+      display: block;
+      margin: 0.85rem auto 0;
+      color: var(--accent);
+      opacity: 0.78;
+      overflow: visible;
+    }
+
+    /* ------- Hero ------- */
+    .hero {
+      max-width: 46rem;
+      margin: 0 auto;
+      min-height: calc(100vh - 6rem);
+      min-height: calc(100svh - 6rem);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4rem 0 5rem;
+    }
+
+    .hero h1 {
+      margin: 0 auto 1.5rem;
+      max-width: 18ch;
+      font-variation-settings: "opsz" 144, "wght" 400, "SOFT" 30;
+      font-size: clamp(2.45rem, 7.4vw, 4.5rem);
+      line-height: 1.02;
+      letter-spacing: -0.024em;
+      color: var(--ink);
+      font-weight: 400;
+      text-wrap: balance;
+    }
+    /* The warm word: italic terracotta. The page's emotional register
+       lives in this one beat. */
+    .hero h1 .warm {
+      font-style: italic;
+      color: var(--accent);
+      font-variation-settings: "opsz" 144, "wght" 400, "SOFT" 60;
+      letter-spacing: -0.012em;
+      padding: 0 0.02em;
+    }
+
+    .hero .lead {
+      margin: 0 auto 3rem;
+      max-width: 32ch;
+      font-style: italic;
+      font-variation-settings: "opsz" 24, "wght" 400, "SOFT" 50;
+      font-size: clamp(1.05rem, 2vw, 1.2rem);
+      line-height: 1.5;
+      color: var(--ink-soft);
+      letter-spacing: -0.003em;
+      text-wrap: pretty;
+    }
+
+    /* ------- Form ------- */
+    .signup {
+      width: 100%;
+      max-width: 28rem;
+      margin: 0 auto;
+    }
+
+    .signup-row {
+      display: flex;
+      align-items: stretch;
+      gap: 0.75rem;
+      /* Stitch hairline: 4px ink, 3px gap. Reads woven, not sterile. */
+      background-image: linear-gradient(90deg, var(--ink) 0 4px, transparent 4px 7px);
+      background-size: 7px 1px;
+      background-repeat: repeat-x;
+      background-position: 0 100%;
+      transition: opacity 700ms ease, transform 700ms ease, background-image 240ms ease;
+    }
+    .signup-row:focus-within {
+      background-image: linear-gradient(90deg, var(--accent) 0 4px, transparent 4px 7px);
+    }
+    .signup.is-submitted .signup-row {
+      opacity: 0.18;
+      transform: translateY(-2px);
+      pointer-events: none;
+    }
+
+    .signup input[type="email"] {
+      flex: 1 1 auto;
+      min-width: 0;
+      width: 100%;
+      background: transparent;
+      border: 0;
+      padding: 0.7rem 0.1rem;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 18, "wght" 400, "SOFT" 30;
+      font-size: 1.05rem;
+      line-height: 1.4;
+      color: var(--ink);
+      outline: none;
+      border-radius: 0;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .signup input[type="email"]::placeholder {
+      color: var(--ink-mute);
+      opacity: 1;
+      font-style: italic;
+    }
+    .signup input[type="email"]:focus::placeholder { opacity: 0.4; }
+
+    .signup button {
+      flex: 0 0 auto;
+      background: transparent;
+      color: var(--accent);
+      border: 0;
+      padding: 0.7rem 0.1rem 0.7rem 0.4rem;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 24, "wght" 500, "SOFT" 30;
+      font-size: 1.05rem;
+      letter-spacing: -0.003em;
+      cursor: pointer;
+      border-radius: 0;
+      -webkit-appearance: none;
+      appearance: none;
+      white-space: nowrap;
+      position: relative;
+      transition: color 180ms ease, letter-spacing 240ms ease;
+    }
+    .signup button::after {
+      content: "";
+      position: absolute;
+      left: 0.4em;
+      right: 0.1em;
+      bottom: 0.45em;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.5;
+      transform-origin: left center;
+      transform: scaleX(0.4);
+      transition: transform 240ms ease, opacity 240ms ease;
+    }
+    .signup button:hover::after,
+    .signup button:focus-visible::after { transform: scaleX(1); opacity: 1; }
+    .signup button:focus-visible {
+      outline: 1.5px solid var(--accent);
+      outline-offset: 6px;
+      border-radius: 1px;
+    }
+
+    .signup .reply {
+      margin: 1.5rem 0 0;
+      min-height: 1.4rem;
+      font-family: var(--serif);
+      font-style: italic;
+      font-variation-settings: "opsz" 18, "wght" 400, "SOFT" 50;
+      font-size: 0.98rem;
+      color: var(--accent);
+      text-align: center;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 360ms ease, transform 360ms ease;
+    }
+    .signup .reply.visible { opacity: 1; transform: none; }
+
+    /* ------- Manifesto ------- */
+    .manifesto {
+      max-width: var(--measure);
+      margin: 0 auto;
+      padding: clamp(2.75rem, 8vh, 5rem) 0 clamp(3rem, 8vh, 5rem);
+    }
+
+    .manifesto p {
+      margin: 0 0 1.65rem;
+      font-variation-settings: "opsz" 18, "wght" 400, "SOFT" 30;
+      font-size: 1.075rem;
+      line-height: 1.7;
+      color: var(--ink);
+      hyphens: auto;
+      -webkit-hyphens: auto;
+      text-wrap: pretty;
+    }
+
+    @media (min-width: 720px) {
+      .manifesto p { font-size: 1.125rem; line-height: 1.7; }
+    }
+
+    /* Gravity moment: "Frame-breaking was made a capital offense in 1812..."
+       sits with extra space above so the cost of the original movement lands. */
+    .manifesto p:nth-of-type(5) { margin-top: 0.75rem; }
+
+    /* "Welcome in." — set as a stamp at the bottom of a letter, not a footnote. */
+    .manifesto p:last-child {
+      margin-top: 1.6rem;
+      font-style: italic;
+      color: var(--accent);
+      font-size: 1.4rem;
+      line-height: 1.3;
+      font-variation-settings: "opsz" 48, "wght" 400, "SOFT" 70;
+      letter-spacing: -0.008em;
+    }
+    @media (min-width: 720px) {
+      .manifesto p:last-child { font-size: 1.55rem; }
+    }
+
+    /* Pulled emphasis on the one parking-lot sentence inside the manifesto. */
+    .manifesto em {
+      font-style: italic;
+      font-variation-settings: "opsz" 24, "wght" 400, "SOFT" 60;
+      color: var(--ink);
+    }
+
+    /* ------- Footer ------- */
+    footer {
+      max-width: var(--measure);
+      margin: 0 auto;
+      padding: 2.75rem 0 3.5rem;
+      text-align: center;
+      font-family: var(--serif);
+      font-style: italic;
+      font-variation-settings: "opsz" 14, "wght" 400, "SOFT" 50;
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+      line-height: 1.7;
+    }
+    footer p { margin: 0 0 0.2rem; }
+    footer a { color: var(--ink-soft); text-decoration-color: var(--rule); }
+    footer a:visited { color: var(--ink-mute); }
+    footer a:hover, footer a:focus-visible {
+      color: var(--accent);
+      text-decoration-color: var(--accent);
+    }
+
+    /* ------- Motion ------- */
+    .reveal { opacity: 0; transform: translateY(8px); }
+
+    @media (prefers-reduced-motion: no-preference) {
+      /* Wordmark + thread arrive alone first, then the page speaks.
+         The beat between them is the phone-down moment. */
+      .mark-anim { animation: rise 900ms 120ms ease-out backwards; }
+      .hero h1   { animation: rise 1100ms 820ms ease-out backwards; }
+      .hero .lead    { animation: rise 1100ms 980ms ease-out backwards; }
+      .hero .signup  { animation: rise 1100ms 1140ms ease-out backwards; }
+      .reveal { transition: opacity 900ms ease, transform 900ms ease; }
+      .reveal.in { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ------- Print ------- */
+    @media print {
+      :root { --paper: #fff; }
+      body::before, .signup, .wordmark .thread { display: none; }
+      a { color: #000; text-decoration: none; }
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <header class="wordmark mark-anim">
+      <span class="mark">Ludite</span>
+      <svg class="thread" width="84" height="22" viewBox="0 0 84 22" aria-hidden="true" focusable="false">
+        <!-- A friend of a friend: three dots, one thread.
+             The product mechanic, drawn small. -->
+        <path d="M 6,16 L 40,5 L 78,14"
+              fill="none" stroke="currentColor"
+              stroke-width="0.9" stroke-linecap="round" opacity="0.55" />
+        <circle cx="6"  cy="16" r="1.7" fill="currentColor" />
+        <circle cx="40" cy="5"  r="1.7" fill="currentColor" />
+        <circle cx="78" cy="14" r="1.7" fill="currentColor" />
+      </svg>
+    </header>
+
+    <main>
+      <section class="hero" aria-label="Ludite">
+        <h1>Ludite is a <i class="warm">gift</i> network.</h1>
+        <p class="lead">A year-round secret santa for people who want to be present with each other.</p>
+
+        <form class="signup" id="signup" novalidate
+              action="https://app.convertkit.com/forms/REPLACE_WITH_FORM_ID/subscriptions"
+              method="post">
+          <!--
+            Replace the action above with your ConvertKit, Mailchimp, or
+            Buttondown endpoint. Input name `email_address` matches ConvertKit
+            defaults; rename if needed.
+          -->
+          <div class="signup-row">
+            <label class="visually-hidden" for="email">Email address</label>
+            <input id="email" name="email_address" type="email" required
+                   autocomplete="email" placeholder="your email" />
+            <button type="submit">Join the waitlist</button>
+          </div>
+          <p class="reply" id="reply" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="manifesto reveal" aria-label="Manifesto">
+        <p>Ludite is a gift network. To become a member, you give. You give your attention to your friends, then gifts to their friends.</p>
+
+        <p>A year-round secret santa, where every month you&rsquo;re matched with a random friend of a friend: someone you don&rsquo;t know, but should.</p>
+
+        <p>The gifts don&rsquo;t have to be expensive, but they can&rsquo;t be mundane. A watercolor of a secret garden. A quilted inside joke. A favorite book. Each one sent with a letter telling its story.</p>
+
+        <p>The original Luddites were English weavers whose craft was being replaced by industrial machines making cheap, inferior cloth. The weavers wrote letters, signed petitions, appealed to Parliament. They were ignored. So they began smashing the machines, organizing under the name of a mythical figure called Ned Ludd&mdash;a young apprentice said to have broken a loom.</p>
+
+        <p>Frame-breaking was made a capital offense in 1812. In 1813, fifteen men were hanged at York. By 1816 the movement was crushed.</p>
+
+        <p>Today, Luddite has become a derogatory word for hopelessly standing in the way of inevitable technology. But the Luddites were not fools who rejected progress. They were not even opposed to machines themselves; they had been skilled loom operators for generations. They rebelled against cheap inferior goods that undermined their agency.</p>
+
+        <p>Technology isn&rsquo;t the enemy. The enemy is carelessly trading intention, craft, and empathy for efficiency, convenience, and profit. Modern Ludites fight for what the original Luddites did, by giving instead of scrolling.</p>
+
+        <p>When we gather, we celebrate these values. <em>We dance. We paint our connections on a wall and find new ones across the room.</em> We give presents and presence. We give ourselves to be ourselves.</p>
+
+        <p>Welcome in.</p>
+      </section>
+    </main>
+
+    <footer>
+      <p>Already a member? <a href="https://testflight.apple.com/" rel="noopener">open in TestFlight</a>.</p>
+      <p><a href="mailto:hello@ludite.live">hello@ludite.live</a></p>
+    </footer>
+
+  </div>
+
+  <script>
+    // Scroll-reveal for the manifesto. One observer, one class toggle.
+    (function () {
+      var els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window) || !els.length) {
+        els.forEach(function (el) { el.classList.add('in'); });
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) {
+            e.target.classList.add('in');
+            io.unobserve(e.target);
+          }
+        });
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
+      els.forEach(function (el) { io.observe(el); });
+    })();
+
+    // Form: light-touch handler. Once a real ConvertKit/Mailchimp action is
+    // wired up, this script gets out of the way and lets the browser submit.
+    (function () {
+      var form  = document.getElementById('signup');
+      var reply = document.getElementById('reply');
+      if (!form || !reply) return;
+
+      form.addEventListener('submit', function (e) {
+        var input = form.querySelector('input[type="email"]');
+        var ok    = input && input.value && /.+@.+\..+/.test(input.value);
+
+        if (!ok) {
+          e.preventDefault();
+          reply.textContent = 'A real email, please.';
+          reply.classList.add('visible');
+          input && input.focus();
+          return;
+        }
+
+        if (form.action.indexOf('REPLACE_WITH_FORM_ID') !== -1) {
+          e.preventDefault();
+          form.classList.add('is-submitted');
+          input.disabled = true;
+          form.querySelector('button').disabled = true;
+          // Brief beat so the form fade reads as "received," then the line lands.
+          setTimeout(function () {
+            reply.textContent = "Got you. We’ll be in touch when there’s room.";
+            reply.classList.add('visible');
+          }, 280);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
